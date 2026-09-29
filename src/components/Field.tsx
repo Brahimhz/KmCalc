@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { sanitizeDecimal, sanitizeInteger } from '../logic/numbers';
-import { radius, usePalette, useThemedStyles, webNoOutline, type Palette } from '../ui/theme';
+import { radius, usePalette, useThemedStyles, type Palette } from '../ui/theme';
 
 export type FieldKind = 'integer' | 'decimal' | 'text';
 
@@ -82,11 +82,7 @@ export function Field({
           </Text>
         ) : null}
       </View>
-      {error ? (
-        <Text style={styles.error}>{error}</Text>
-      ) : hint ? (
-        <Text style={styles.hint}>{hint}</Text>
-      ) : null}
+      {error ? <Text style={styles.error}>{error}</Text> : hint ? <Text style={styles.hint}>{hint}</Text> : null}
     </View>
   );
 }
@@ -113,7 +109,6 @@ const makeStyles = (p: Palette) =>
       fontSize: 17,
       color: p.text,
       fontVariant: ['tabular-nums'],
-      ...webNoOutline,
     },
     inputLarge: { fontSize: 24, fontWeight: '700', paddingVertical: 12 },
     suffix: { marginLeft: 6, fontSize: 14, fontWeight: '600', color: p.textMuted },

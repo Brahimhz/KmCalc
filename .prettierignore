@@ -1,0 +1,5 @@
+android/
+ios/
+coverage/
+vendor/
+package-lock.json

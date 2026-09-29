@@ -87,7 +87,9 @@ export function periodEndDate(startDate: ISODate, length: number, unit: PeriodUn
   }
 }
 
-export function totalAllowance(values: Pick<RentalValues, 'allowanceKm' | 'allowanceMode' | 'periodLength'>): number | null {
+export function totalAllowance(
+  values: Pick<RentalValues, 'allowanceKm' | 'allowanceMode' | 'periodLength'>,
+): number | null {
   if (!isPositive(values.allowanceKm)) return null;
   if (values.allowanceMode === 'total') return values.allowanceKm;
   const periods = wholePeriods(values.periodLength);
@@ -141,7 +143,14 @@ export function summarizeRental(values: RentalValues, today: ISODate): RentalSum
   let projectedExtraCost: number | null = null;
   let limitReachedOn: ISODate | null = null;
 
-  if (usedKm !== null && allowance !== null && remainingKm !== null && totalDays !== null && daysElapsed !== null && daysLeft !== null) {
+  if (
+    usedKm !== null &&
+    allowance !== null &&
+    remainingKm !== null &&
+    totalDays !== null &&
+    daysElapsed !== null &&
+    daysLeft !== null
+  ) {
     if (daysElapsed >= 1) {
       averageKmPerDay = usedKm / daysElapsed;
       // An estimate, so whole km: the extra km and the extra cost then match what is shown.

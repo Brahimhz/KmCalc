@@ -1,4 +1,3 @@
-import Feather from '@expo/vector-icons/Feather';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -13,6 +12,7 @@ import {
 } from '../logic/dates';
 import { usePalette, useThemedStyles, type Palette } from '../ui/theme';
 import { Button } from './Button';
+import { Icon } from './Icon';
 import { ModalCard } from './ModalCard';
 
 interface Props {
@@ -63,14 +63,26 @@ export function DatePickerModal({ visible, value, today, onSelect, onClose }: Pr
   return (
     <ModalCard visible={visible} onClose={onClose} testID="date-picker">
       <View style={styles.header}>
-        <Pressable onPress={() => shiftMonth(-1)} style={styles.navButton} accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={8}>
-          <Feather name="chevron-left" size={26} color={palette.text} />
+        <Pressable
+          onPress={() => shiftMonth(-1)}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
+          hitSlop={8}
+        >
+          <Icon name="chevron-left" size={26} color={palette.text} />
         </Pressable>
         <Text style={styles.monthTitle} accessibilityRole="header">
           {MONTH_NAMES[shown.month - 1]} {shown.year}
         </Text>
-        <Pressable onPress={() => shiftMonth(1)} style={styles.navButton} accessibilityRole="button" accessibilityLabel="Next month" hitSlop={8}>
-          <Feather name="chevron-right" size={26} color={palette.text} />
+        <Pressable
+          onPress={() => shiftMonth(1)}
+          style={styles.navButton}
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
+          hitSlop={8}
+        >
+          <Icon name="chevron-right" size={26} color={palette.text} />
         </Pressable>
       </View>
 
@@ -99,7 +111,9 @@ export function DatePickerModal({ visible, value, today, onSelect, onClose }: Pr
                 accessibilityState={{ selected }}
               >
                 <View style={[styles.day, isToday && styles.today, selected && styles.selected]}>
-                  <Text style={[styles.dayText, isToday && styles.todayText, selected && styles.selectedText]}>{day}</Text>
+                  <Text style={[styles.dayText, isToday && styles.todayText, selected && styles.selectedText]}>
+                    {day}
+                  </Text>
                 </View>
               </Pressable>
             );
@@ -122,7 +136,14 @@ const makeStyles = (p: Palette) =>
     monthTitle: { fontSize: 17, fontWeight: '700', color: p.text },
     week: { flexDirection: 'row' },
     cell: { flex: 1, height: 42, alignItems: 'center', justifyContent: 'center' },
-    weekday: { fontSize: 12, fontWeight: '700', color: p.textMuted, textAlign: 'center', textAlignVertical: 'center', lineHeight: 42 },
+    weekday: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: p.textMuted,
+      textAlign: 'center',
+      textAlignVertical: 'center',
+      lineHeight: 42,
+    },
     day: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
     today: { borderWidth: 1.5, borderColor: p.primary },
     selected: { backgroundColor: p.primary, borderWidth: 0 },

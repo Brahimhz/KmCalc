@@ -15,7 +15,9 @@ interface Props {
 export function StatTile({ label, value, caption, tone = 'neutral', testID }: Props) {
   const palette = usePalette();
   const styles = useThemedStyles(makeStyles);
-  const valueColor = { neutral: palette.text, good: palette.good, warning: palette.warning, danger: palette.danger }[tone];
+  const valueColor = { neutral: palette.text, good: palette.good, warning: palette.warning, danger: palette.danger }[
+    tone
+  ];
   return (
     <View style={styles.tile} testID={testID}>
       <Text style={styles.label}>{label}</Text>

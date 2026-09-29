@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Platform, useColorScheme, type TextStyle } from 'react-native';
+import { useColorScheme } from 'react-native';
 
 export interface Palette {
   scheme: 'light' | 'dark';
@@ -93,12 +93,5 @@ export function useThemedStyles<T>(factory: (palette: Palette) => T): T {
   const palette = usePalette();
   return useMemo(() => factory(palette), [factory, palette]);
 }
-
-/**
- * Removes the browser focus ring from text inputs on web; fields show their own
- * focus border instead. `outlineStyle: 'none'` is web-only, hence the cast.
- */
-export const webNoOutline: TextStyle | null =
-  Platform.OS === 'web' ? ({ outlineStyle: 'none' } as unknown as TextStyle) : null;
 
 export const radius = { card: 18, field: 12, pill: 999 };

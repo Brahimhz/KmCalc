@@ -60,7 +60,13 @@ describe('loading saved data', () => {
 
   it('keeps valid saved defaults and repairs invalid ones', () => {
     expect(
-      normalizeDefaults({ allowanceKm: 3000, periodUnit: 'week', periodLength: 2.7, extraKmRate: -1, currency: ' usd ' }),
+      normalizeDefaults({
+        allowanceKm: 3000,
+        periodUnit: 'week',
+        periodLength: 2.7,
+        extraKmRate: -1,
+        currency: ' usd ',
+      }),
     ).toEqual({
       allowanceKm: 3000,
       allowanceMode: 'total',

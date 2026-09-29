@@ -108,7 +108,8 @@ export function normalizeDefaults(raw: unknown): Defaults {
   return {
     allowanceKm: positive(source.allowanceKm) ?? FACTORY_DEFAULTS.allowanceKm,
     allowanceMode: oneOf(source.allowanceMode, ALLOWANCE_MODES) ?? FACTORY_DEFAULTS.allowanceMode,
-    periodLength: periodLength !== undefined && periodLength >= 1 ? Math.floor(periodLength) : FACTORY_DEFAULTS.periodLength,
+    periodLength:
+      periodLength !== undefined && periodLength >= 1 ? Math.floor(periodLength) : FACTORY_DEFAULTS.periodLength,
     periodUnit: oneOf(source.periodUnit, PERIOD_UNITS) ?? FACTORY_DEFAULTS.periodUnit,
     extraKmRate: nonNegative(source.extraKmRate) ?? FACTORY_DEFAULTS.extraKmRate,
     currency: textWith(source.currency, sanitizeCurrency) ?? FACTORY_DEFAULTS.currency,

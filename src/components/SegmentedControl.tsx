@@ -16,10 +16,22 @@ interface Props<T extends string> {
   style?: StyleProp<ViewStyle>;
 }
 
-export function SegmentedControl<T extends string>({ options, value, onChange, accessibilityLabel, testID, style }: Props<T>) {
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  accessibilityLabel,
+  testID,
+  style,
+}: Props<T>) {
   const styles = useThemedStyles(makeStyles);
   return (
-    <View style={[styles.track, style]} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel} testID={testID}>
+    <View
+      style={[styles.track, style]}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+    >
       {options.map((option) => {
         const selected = option.value === value;
         return (

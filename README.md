@@ -10,8 +10,6 @@
 
 <p align="center">
   <a href="https://github.com/Brahimhz/KmCalc/releases/latest"><b>Download for Android (APK)</b></a>
-  &nbsp;·&nbsp;
-  <a href="https://brahimhz.github.io/KmCalc/"><b>Open the web app</b></a>
 </p>
 
 <p align="center">
@@ -31,7 +29,7 @@ Enter the odometer reading from when you picked up the car and today's reading. 
 - Your **daily average** so far and a **daily budget** to stay within the limit.
 - A **projection** of where your current pace takes you by the end of the rental, and when you would hit the limit.
 
-Everything is saved on the device automatically.
+Everything is saved on the phone. The app works offline and asks for no permissions.
 
 ### Default values (all editable)
 
@@ -61,55 +59,74 @@ projection    = daily average × days in the rental
 
 ## Install
 
-- **Android:** download `KmCalc-vX.Y.Z.apk` from the [latest release](https://github.com/Brahimhz/KmCalc/releases/latest) and open it on your phone. Allow installing from your browser or files app when Android asks.
-- **Any phone or computer:** use the [web app](https://brahimhz.github.io/KmCalc/). On a phone, use *Add to Home screen* to open it like an app. Its data is stored in that browser.
-- **iPhone:** the code is cross-platform (Expo / React Native), so an iOS build can be made with EAS or Xcode. Until then, use the web app.
+- **Android (7.0 and newer):** download `KmCalc-vX.Y.Z.apk` from the [latest release](https://github.com/Brahimhz/KmCalc/releases/latest) and open it on your phone. Allow installing from your browser or files app when Android asks.
+- **iPhone:** the app is written in React Native, so the same code runs on iOS. It needs a Mac with Xcode to build (see below) and is not published yet.
 
 ## Development
 
-Built with [Expo](https://expo.dev) SDK 57 (React Native 0.86, TypeScript): one codebase for Android, iOS and the web.
+A plain [React Native](https://reactnative.dev) 0.87 app in TypeScript. The native projects are in `android/` (open it in Android Studio) and `ios/` (Xcode).
+
+You need Node.js 22 or newer and [Android Studio](https://developer.android.com/studio) (Android SDK, emulator and the JDK it bundles). React Native needs to find them; on Windows (PowerShell):
+
+```powershell
+[Environment]::SetEnvironmentVariable('ANDROID_HOME', "$env:LOCALAPPDATA\Android\Sdk", 'User')
+[Environment]::SetEnvironmentVariable('JAVA_HOME', 'C:\Program Files\Android\Android Studio\jbr', 'User')
+```
+
+Then, with an emulator running or a phone connected with USB debugging:
 
 ```bash
 npm install
-npm start          # dev server: press "a" for a connected Android phone/emulator, "w" for the web
+npm start          # Metro, the JavaScript dev server (keep it running)
+npm run android    # in a second terminal: builds a debug app and opens it on the emulator/phone
 npm test           # unit and UI tests (Jest + React Native Testing Library)
 npm run check      # type check, lint and tests
-npm run build:web  # static web build in dist/
 ```
+
+In Android Studio, open the `android/` folder and use **Run** (start `npm start` first for debug builds).
+
+For iOS, on a Mac: `bundle install`, `cd ios && bundle exec pod install`, then `npm run ios`.
 
 ```text
 App.tsx            app shell: theme, saved data, screen switching
+index.js           entry point
 src/logic/         calculations (calc, dates, numbers): pure functions with unit tests
 src/state/         rental form, defaults and on-device storage
 src/screens/       Calculator and Default values screens
-src/components/    fields, result card, calendar, dialogs...
+src/components/    fields, result card, calendar, icons, dialogs...
 __tests__/         UI tests
+android/, ios/     native projects
+scripts/           icon generators
 ```
 
 ### Releasing the Android app
 
-The APK is built by GitHub Actions ([android.yml](.github/workflows/android.yml)):
+The release APK is built by GitHub Actions ([android.yml](.github/workflows/android.yml)); every push to `main` also builds one you can download from the run's artifacts.
 
-1. Bump `version` and `android.versionCode` in `app.json` so phones install it as an update.
+1. Bump `versionCode` (always +1) and `versionName` in `android/app/build.gradle`. Keep `version` in `package.json` and `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `ios/KmCalc.xcodeproj/project.pbxproj` in step.
 2. Push a version tag; the workflow attaches the APK to a new release:
 
    ```bash
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v1.1.1
+   git push origin v1.1.1
    ```
-
-You can also run the **Android APK** workflow from the Actions tab and download the APK artifact.
 
 The APK is signed with the release key stored in the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS` (it falls back to the debug key when they are missing, e.g. in forks). Keep a backup of the keystore: updates must be signed with the same key.
 
-To build on your own machine you need the Android SDK and JDK 17:
+To build a signed release APK on your own machine, add the key to `~/.gradle/gradle.properties` (outside the repository):
 
-```bash
-npx expo prebuild --platform android
-cd android && ./gradlew assembleRelease
+```properties
+KMCALC_STORE_FILE=C:/path/to/kmcalc-release.p12
+KMCALC_STORE_PASSWORD=...
+KMCALC_KEY_ALIAS=kmcalc
+KMCALC_KEY_PASSWORD=...
 ```
 
-Every push to `main` also publishes the web app to GitHub Pages ([pages.yml](.github/workflows/pages.yml)).
+and run `cd android && ./gradlew assembleRelease` (`gradlew.bat` on Windows). The APK is written to `android/app/build/outputs/apk/release/`.
+
+### Icons
+
+The app icons are drawn by [scripts/generate-icons.js](scripts/generate-icons.js) and the UI icons ([Feather](https://feathericons.com), MIT) by [scripts/generate-ui-icons.js](scripts/generate-ui-icons.js). Both need `npm install --no-save sharp feather-icons` first.
 
 ## License
 

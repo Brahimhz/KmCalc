@@ -1,7 +1,5 @@
-import { StatusBar } from 'expo-status-bar';
-import * as SystemUI from 'expo-system-ui';
-import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { CalculatorScreen } from './src/screens/CalculatorScreen';
@@ -24,11 +22,6 @@ function Main() {
   const { data, updateRental, saveDefaults, startNewRental } = useAppData();
   const [screen, setScreen] = useState<'calculator' | 'defaults'>('calculator');
 
-  // Matches the window background (visible behind the keyboard and during transitions) to the theme.
-  useEffect(() => {
-    SystemUI.setBackgroundColorAsync(palette.background).catch(() => {});
-  }, [palette.background]);
-
   const openDefaults = useCallback(() => setScreen('defaults'), []);
   const closeDefaults = useCallback(() => setScreen('calculator'), []);
   const handleSaveDefaults = useCallback(
@@ -40,8 +33,8 @@ function Main() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: palette.background }}>
-      <StatusBar style={palette.scheme === 'dark' ? 'light' : 'dark'} />
+    <View style={[styles.root, { backgroundColor: palette.background }]}>
+      <StatusBar barStyle={palette.scheme === 'dark' ? 'light-content' : 'dark-content'} />
       {data === null ? null : screen === 'calculator' ? (
         <CalculatorScreen
           rental={data.rental}
@@ -57,3 +50,7 @@ function Main() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});

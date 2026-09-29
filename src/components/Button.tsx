@@ -1,10 +1,7 @@
-import Feather from '@expo/vector-icons/Feather';
-import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { radius, usePalette, useThemedStyles, type Palette } from '../ui/theme';
-
-export type IconName = ComponentProps<typeof Feather>['name'];
+import { Icon, type IconName } from './Icon';
 
 interface Props {
   title: string;
@@ -26,7 +23,7 @@ export function Button({ title, onPress, variant = 'primary', icon, testID, styl
       testID={testID}
       style={({ pressed }) => [styles.base, styles[variant], pressed && styles.pressed, style]}
     >
-      {icon ? <Feather name={icon} size={19} color={textColor} /> : null}
+      {icon ? <Icon name={icon} size={19} color={textColor} /> : null}
       <Text style={[styles.title, { color: textColor }]}>{title}</Text>
     </Pressable>
   );

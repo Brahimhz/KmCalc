@@ -1,13 +1,29 @@
-import Feather from '@expo/vector-icons/Feather';
 import { useEffect, useState } from 'react';
-import { BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  BackHandler,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
 import { Field } from '../components/Field';
+import { Icon } from '../components/Icon';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { parseNumber } from '../logic/numbers';
-import { contractFromDefaults, FACTORY_DEFAULTS, sanitizeCurrency, type ContractFields, type Defaults } from '../state/rental';
+import {
+  contractFromDefaults,
+  FACTORY_DEFAULTS,
+  sanitizeCurrency,
+  type ContractFields,
+  type Defaults,
+} from '../state/rental';
 import { allowanceModeOptions, describeDefaults, PERIOD_OPTIONS } from '../ui/labels';
 import { radius, usePalette, useThemedStyles, type Palette } from '../ui/theme';
 
@@ -84,7 +100,7 @@ export function DefaultsScreen({ defaults, onSave, onClose }: Props) {
           hitSlop={8}
           testID="defaults-back"
         >
-          <Feather name="arrow-left" size={24} color={palette.text} />
+          <Icon name="arrow-left" size={24} color={palette.text} />
         </Pressable>
         <Text style={styles.title} accessibilityRole="header">
           Default values
@@ -174,24 +190,28 @@ export function DefaultsScreen({ defaults, onSave, onClose }: Props) {
               <View style={styles.flex}>
                 <Text style={styles.switchTitle}>Apply to the current rental</Text>
                 <Text style={styles.switchText}>
-                  Also update the contract of the rental you are tracking now. Odometer readings and the start date stay as
-                  they are.
+                  Also update the contract of the rental you are tracking now. Odometer readings and the start date stay
+                  as they are.
                 </Text>
               </View>
               <Switch
                 value={applyToCurrent}
                 onValueChange={setApplyToCurrent}
                 trackColor={{ false: palette.border, true: palette.primary }}
-                thumbColor={Platform.OS === 'ios' ? undefined : SWITCH_THUMB}
-                // react-native-web colors the "on" thumb separately.
-                {...(Platform.OS === 'web' ? { activeThumbColor: SWITCH_THUMB } : null)}
+                thumbColor={Platform.OS === 'android' ? SWITCH_THUMB : undefined}
                 accessibilityLabel="Apply to the current rental"
                 testID="apply-to-current"
               />
             </View>
 
             <Button title="Save defaults" icon="save" onPress={save} testID="save-defaults" />
-            <Button variant="ghost" title="Restore original values" icon="rotate-ccw" onPress={restoreOriginal} testID="restore-defaults" />
+            <Button
+              variant="ghost"
+              title="Restore original values"
+              icon="rotate-ccw"
+              onPress={restoreOriginal}
+              testID="restore-defaults"
+            />
             <Text style={styles.footnote}>Original values: {describeDefaults(FACTORY_DEFAULTS)}</Text>
           </View>
         </ScrollView>

@@ -1,6 +1,7 @@
-# Builds an installable release APK.
-# - Push a tag like v1.0.0 to attach the APK to a GitHub release.
-# - Or run it by hand from the Actions tab and download the APK artifact.
+# Builds the installable release APK from the android/ project.
+# - Every push to main: the APK is kept as a workflow artifact (for testing).
+# - A tag like v1.1.0: the APK is also attached to a GitHub release.
+# - It can also be started by hand from the Actions tab.
 #
 # The APK is signed with the release key stored in these repository secrets:
 #   ANDROID_KEYSTORE_BASE64   base64 of the PKCS12 keystore
@@ -11,6 +12,7 @@ name: Android APK
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -42,7 +44,7 @@ jobs:
       # up front lets a corrupted download be retried.
       - name: Install the Android NDK
         run: |
-          NDK=$(sed -nE 's/^ndkVersion = "([^"]+)"/\1/p' node_modules/react-native/gradle/libs.versions.toml)
+          NDK=$(sed -nE 's/.*ndkVersion *= *"([^"]+)".*/\1/p' android/build.gradle)
           echo "NDK $NDK"
           for attempt in 1 2 3; do
             if yes 2> /dev/null | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK" > /dev/null; then break; fi
@@ -50,9 +52,6 @@ jobs:
             sleep 20
           done
           test -f "$ANDROID_HOME/ndk/$NDK/source.properties"
-
-      - name: Generate the native Android project
-        run: npx expo prebuild --platform android --no-install
 
       - name: Build the release APK
         working-directory: android
@@ -65,21 +64,20 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.p12"
             SIGNING=(
-              "-Pandroid.injected.signing.store.file=$RUNNER_TEMP/release.p12"
-              "-Pandroid.injected.signing.store.password=$KEYSTORE_PASSWORD"
-              "-Pandroid.injected.signing.key.alias=$KEY_ALIAS"
-              "-Pandroid.injected.signing.key.password=$KEYSTORE_PASSWORD"
+              "-PKMCALC_STORE_FILE=$RUNNER_TEMP/release.p12"
+              "-PKMCALC_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+              "-PKMCALC_KEY_ALIAS=$KEY_ALIAS"
+              "-PKMCALC_KEY_PASSWORD=$KEYSTORE_PASSWORD"
             )
           else
             echo "::warning::No release key configured: the APK is signed with the debug key."
           fi
-          # ARM for phones, x86_64 for emulators and x86 Chromebooks (32-bit x86 devices are left out).
-          ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64 "${SIGNING[@]}"
+          ./gradlew assembleRelease --no-daemon "${SIGNING[@]}"
 
       - name: Name the APK after the version
         id: apk
         run: |
-          VERSION=$(node -p "require('./app.json').expo.version")
+          VERSION=$(sed -nE 's/.*versionName "([^"]+)".*/\1/p' android/app/build.gradle)
           mkdir -p out
           cp android/app/build/outputs/apk/release/app-release.apk "out/KmCalc-v$VERSION.apk"
           echo "file=out/KmCalc-v$VERSION.apk" >> "$GITHUB_OUTPUT"

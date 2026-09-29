@@ -1,11 +1,11 @@
-import Feather from '@expo/vector-icons/Feather';
 import { useMemo, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, type IconName } from '../components/Button';
+import { Button } from '../components/Button';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { Field } from '../components/Field';
+import { Icon, type IconName } from '../components/Icon';
 import { ModalCard } from '../components/ModalCard';
 import { ResultCard } from '../components/ResultCard';
 import { SegmentedControl } from '../components/SegmentedControl';
@@ -48,8 +48,11 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
     rental.allowanceMode === 'total'
       ? 'One allowance for the whole rental period.'
       : summary.totalAllowanceKm !== null && values.periodLength !== null
-        ? `${formatKm(values.allowanceKm ?? 0)} × ${describePeriod(Math.floor(values.periodLength), rental.periodUnit)} = ${formatKm(summary.totalAllowanceKm)} in total.`
-        : `Allowance for each ${UNIT_WORDS[rental.periodUnit].one} of the rental.`;
+      ? `${formatKm(values.allowanceKm ?? 0)} × ${describePeriod(
+          Math.floor(values.periodLength),
+          rental.periodUnit,
+        )} = ${formatKm(summary.totalAllowanceKm)} in total.`
+      : `Allowance for each ${UNIT_WORDS[rental.periodUnit].one} of the rental.`;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -81,7 +84,7 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
                 hitSlop={8}
                 testID="open-defaults"
               >
-                <Feather name="sliders" size={20} color={palette.text} />
+                <Icon name="sliders" size={20} color={palette.text} />
               </Pressable>
             </View>
 
@@ -138,9 +141,9 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
                 accessibilityHint="Opens a calendar"
                 testID="start-date"
               >
-                <Feather name="calendar" size={20} color={palette.primary} />
+                <Icon name="calendar" size={20} color={palette.primary} />
                 <Text style={styles.dateText}>{formatDateWithWeekday(rental.startDate)}</Text>
-                <Feather name="chevron-down" size={20} color={palette.textMuted} />
+                <Icon name="chevron-down" size={20} color={palette.textMuted} />
               </Pressable>
 
               <View style={styles.divider} />
@@ -165,7 +168,10 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
               </View>
               <Text style={[styles.hint, summary.endDate === null && styles.hintError]}>
                 {summary.endDate !== null && summary.totalDays !== null
-                  ? `Return on ${formatDateWithWeekday(summary.endDate)} · ${summary.totalDays} ${plural(summary.totalDays, 'day')}`
+                  ? `Return on ${formatDateWithWeekday(summary.endDate)} · ${summary.totalDays} ${plural(
+                      summary.totalDays,
+                      'day',
+                    )}`
                   : 'Enter the length of the rental.'}
               </Text>
 
@@ -177,7 +183,11 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
                 onChangeText={(allowanceKm) => onChange({ allowanceKm })}
                 suffix="km"
                 maxLength={7}
-                error={values.allowanceKm === null || values.allowanceKm <= 0 ? 'Enter the km included in the contract.' : null}
+                error={
+                  values.allowanceKm === null || values.allowanceKm <= 0
+                    ? 'Enter the km included in the contract.'
+                    : null
+                }
                 testID="allowance-km"
               />
               <SegmentedControl
@@ -287,10 +297,10 @@ function statTiles(s: RentalSummary, startDate: ISODate, today: ISODate): TilePr
       s.phase === 'upcoming'
         ? `Starts ${formatDate(startDate, false)}`
         : s.phase === 'ended'
-          ? today === s.endDate
-            ? 'Return day'
-            : `Ended ${formatDate(s.endDate, false)}`
-          : `Day ${(s.daysElapsed ?? 0) + 1} of ${s.totalDays}`;
+        ? today === s.endDate
+          ? 'Return day'
+          : `Ended ${formatDate(s.endDate, false)}`
+        : `Day ${(s.daysElapsed ?? 0) + 1} of ${s.totalDays}`;
     tiles.push({
       label: 'Days left',
       value: formatNumber(s.daysLeft ?? 0),
@@ -309,7 +319,12 @@ function statTiles(s: RentalSummary, startDate: ISODate, today: ISODate): TilePr
   const needsReadings = s.usedKm === null;
   tiles.push(
     s.averageKmPerDay !== null
-      ? { label: 'Daily average', value: `${formatNumber(s.averageKmPerDay)} km`, caption: 'per day so far', testID: 'daily-average' }
+      ? {
+          label: 'Daily average',
+          value: `${formatNumber(s.averageKmPerDay)} km`,
+          caption: 'per day so far',
+          testID: 'daily-average',
+        }
       : {
           label: 'Daily average',
           value: '—',
@@ -319,7 +334,13 @@ function statTiles(s: RentalSummary, startDate: ISODate, today: ISODate): TilePr
   );
 
   if (s.status === 'over') {
-    tiles.push({ label: 'Daily budget', value: '0 km', caption: 'Allowance used up', tone: 'danger', testID: 'daily-budget' });
+    tiles.push({
+      label: 'Daily budget',
+      value: '0 km',
+      caption: 'Allowance used up',
+      tone: 'danger',
+      testID: 'daily-budget',
+    });
   } else if (s.dailyBudgetKm !== null) {
     tiles.push({
       label: 'Daily budget',
@@ -370,13 +391,17 @@ export function paceNote(s: RentalSummary, startDate: ISODate, today: ISODate, c
     return {
       tone: 'warning',
       icon: 'alert-circle',
-      text: `At ${pace} you will drive about ${formatKm(s.projectedTotalKm)} by ${by}, which is ${formatKm(s.projectedExtraKm ?? 0)} over the allowance${cost}.${limit}`,
+      text: `At ${pace} you will drive about ${formatKm(s.projectedTotalKm)} by ${by}, which is ${formatKm(
+        s.projectedExtraKm ?? 0,
+      )} over the allowance${cost}.${limit}`,
     };
   }
   return {
     tone: 'good',
     icon: 'check-circle',
-    text: `On track: at ${pace} you will drive about ${formatKm(s.projectedTotalKm)} of your ${formatKm(s.totalAllowanceKm ?? 0)} by ${by}.`,
+    text: `On track: at ${pace} you will drive about ${formatKm(s.projectedTotalKm)} of your ${formatKm(
+      s.totalAllowanceKm ?? 0,
+    )} by ${by}.`,
   };
 }
 
@@ -391,7 +416,7 @@ function PaceNote({ tone, icon, text }: Note) {
   }[tone];
   return (
     <View style={[styles.note, { backgroundColor: background }]} testID="pace-note">
-      <Feather name={icon} size={20} color={accent} style={styles.noteIcon} />
+      <Icon name={icon} size={20} color={accent} style={styles.noteIcon} />
       <Text style={styles.noteText}>{text}</Text>
     </View>
   );
@@ -426,13 +451,17 @@ function NewRentalDialog({ visible, defaults, currentKm, onClose, onConfirm }: N
           accessibilityState={{ checked: sameCar }}
           testID="same-car"
         >
-          <Feather name={sameCar ? 'check-square' : 'square'} size={22} color={palette.primary} />
+          <Icon name={sameCar ? 'check-square' : 'square'} size={22} color={palette.primary} />
           <Text style={styles.checkText}>Same car: start from the current odometer ({formatKm(currentKm)})</Text>
         </Pressable>
       ) : null}
       <View style={styles.dialogButtons}>
         <Button variant="ghost" title="Cancel" onPress={onClose} />
-        <Button title="Start new rental" onPress={() => onConfirm(sameCar && currentKm !== null)} testID="confirm-new-rental" />
+        <Button
+          title="Start new rental"
+          onPress={() => onConfirm(sameCar && currentKm !== null)}
+          testID="confirm-new-rental"
+        />
       </View>
     </ModalCard>
   );

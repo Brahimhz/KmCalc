@@ -20,7 +20,8 @@ export function useAppData() {
   }, []);
 
   useEffect(() => {
-    if (data) void saveAppData(data);
+    // saveAppData handles its own errors.
+    if (data) saveAppData(data);
   }, [data]);
 
   const updateRental = useCallback((changes: Partial<RentalForm>) => {

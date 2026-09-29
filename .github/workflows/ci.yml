@@ -24,6 +24,3 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test -- --ci
-
-      - name: Check that the web app bundles
-        run: npx expo export -p web

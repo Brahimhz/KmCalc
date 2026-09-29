@@ -1,9 +1,15 @@
-// Draws the app icons (a speedometer gauge with "KM") and writes them to assets/.
+// Draws the app icon (a speedometer gauge with "KM") and writes every size the apps need:
+// - assets/icon.png                 master icon, also shown in the app header
+// - android/.../mipmap-*            adaptive (foreground, background, monochrome), legacy and round icons
+// - ios/.../AppIcon.appiconset      1024 px App Store / home screen icon
 // Usage: npm install --no-save sharp && node scripts/generate-icons.js
+const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
-const OUT = path.join(__dirname, '..', 'assets');
+const ROOT = path.join(__dirname, '..');
+const ANDROID_RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res');
+const IOS_ICONS = path.join(ROOT, 'ios', 'KmCalc', 'Images.xcassets', 'AppIcon.appiconset');
 
 const BG_TOP = '#4A76FF';
 const BG_BOTTOM = '#1B3CC4';
@@ -61,8 +67,8 @@ function glyph({ main = '#FFFFFF', trackOpacity = 0.3, accent = ACCENT }) {
     <path d="${letters}" ${line} stroke="${main}" stroke-width="30"/>`;
 }
 
-const svg = (body, size = 1024) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 1024 1024">
+const svg = (body) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
     <defs>
       <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="${BG_TOP}"/>
@@ -72,28 +78,64 @@ const svg = (body, size = 1024) =>
     ${body}
   </svg>`;
 
-const scaled = (content, scale) => `<g transform="translate(512 512) scale(${scale}) translate(-512 -512)">${content}</g>`;
+const scaled = (content, scale) =>
+  `<g transform="translate(512 512) scale(${scale}) translate(-512 -512)">${content}</g>`;
 const background = '<rect width="1024" height="1024" fill="url(#bg)"/>';
 
-const files = {
-  // iOS / legacy Android icon: a full square, the OS applies the mask.
-  'icon.png': { svg: svg(background + scaled(glyph({}), 0.92)), size: 1024 },
-  // Android adaptive icon layers: the glyph stays inside the central safe zone.
-  'android-icon-background.png': { svg: svg(background), size: 1024 },
-  'android-icon-foreground.png': { svg: svg(scaled(glyph({}), 0.72)), size: 1024 },
-  'android-icon-monochrome.png': { svg: svg(scaled(glyph({ accent: '#FFFFFF', trackOpacity: 0.4 }), 0.72)), size: 1024 },
-  // Splash screen: the glyph only, shown on the splash background color.
-  'splash-icon.png': { svg: svg(scaled(glyph({}), 1)), size: 1024 },
-  // Web favicon with rounded corners.
-  'favicon.png': {
-    svg: svg(`<rect width="1024" height="1024" rx="230" fill="url(#bg)"/>` + scaled(glyph({}), 0.92), 256),
-    size: 256,
-  },
+const SOURCES = {
+  // Full square; iOS and the header apply their own rounding.
+  full: svg(background + scaled(glyph({}), 0.92)),
+  // Legacy Android icons (Android 7): rounded square and circle.
+  rounded: svg(`<rect width="1024" height="1024" rx="230" fill="url(#bg)"/>` + scaled(glyph({}), 0.92)),
+  round: svg(`<circle cx="512" cy="512" r="512" fill="url(#bg)"/>` + scaled(glyph({}), 0.86)),
+  // Adaptive icon layers (Android 8+): the glyph stays inside the central safe zone.
+  background: svg(background),
+  foreground: svg(scaled(glyph({}), 0.72)),
+  monochrome: svg(scaled(glyph({ accent: '#FFFFFF', trackOpacity: 0.4 }), 0.72)),
 };
 
+// dp-to-px multipliers of the Android density buckets.
+const DENSITIES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+
+const ADAPTIVE_XML = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_monochrome" />
+</adaptive-icon>
+`;
+
+const IOS_CONTENTS = {
+  images: [{ filename: 'AppIcon-1024.png', idiom: 'universal', platform: 'ios', size: '1024x1024' }],
+  info: { author: 'xcode', version: 1 },
+};
+
+async function png(source, size, file, { opaque = false } = {}) {
+  let image = sharp(Buffer.from(source)).resize(size, size);
+  if (opaque) image = image.flatten({ background: BG_BOTTOM }).removeAlpha();
+  await image.png({ compressionLevel: 9 }).toFile(file);
+}
+
 (async () => {
-  for (const [name, { svg: source, size }] of Object.entries(files)) {
-    await sharp(Buffer.from(source)).resize(size, size).png({ compressionLevel: 9 }).toFile(path.join(OUT, name));
-    console.log('wrote assets/' + name);
+  await png(SOURCES.full, 1024, path.join(ROOT, 'assets', 'icon.png'));
+
+  for (const [density, scale] of Object.entries(DENSITIES)) {
+    const dir = path.join(ANDROID_RES, `mipmap-${density}`);
+    fs.mkdirSync(dir, { recursive: true });
+    await png(SOURCES.rounded, 48 * scale, path.join(dir, 'ic_launcher.png'));
+    await png(SOURCES.round, 48 * scale, path.join(dir, 'ic_launcher_round.png'));
+    await png(SOURCES.background, 108 * scale, path.join(dir, 'ic_launcher_background.png'));
+    await png(SOURCES.foreground, 108 * scale, path.join(dir, 'ic_launcher_foreground.png'));
+    await png(SOURCES.monochrome, 108 * scale, path.join(dir, 'ic_launcher_monochrome.png'));
   }
+  const anydpi = path.join(ANDROID_RES, 'mipmap-anydpi-v26');
+  fs.mkdirSync(anydpi, { recursive: true });
+  fs.writeFileSync(path.join(anydpi, 'ic_launcher.xml'), ADAPTIVE_XML);
+  fs.writeFileSync(path.join(anydpi, 'ic_launcher_round.xml'), ADAPTIVE_XML);
+
+  // The App Store icon must not have an alpha channel.
+  await png(SOURCES.full, 1024, path.join(IOS_ICONS, 'AppIcon-1024.png'), { opaque: true });
+  fs.writeFileSync(path.join(IOS_ICONS, 'Contents.json'), JSON.stringify(IOS_CONTENTS, null, 2) + '\n');
+
+  console.log('icons written');
 })();

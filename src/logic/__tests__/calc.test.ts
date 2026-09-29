@@ -95,7 +95,13 @@ describe('totalAllowance', () => {
 describe('summarizeRental: schedule and pace', () => {
   it('counts the days of the rental period', () => {
     const summary = summarizeRental(rental({ currentKm: 46200 }), '2026-09-16');
-    expect(summary).toMatchObject({ endDate: '2026-10-01', totalDays: 30, daysElapsed: 15, daysLeft: 15, phase: 'active' });
+    expect(summary).toMatchObject({
+      endDate: '2026-10-01',
+      totalDays: 30,
+      daysElapsed: 15,
+      daysLeft: 15,
+      phase: 'active',
+    });
   });
 
   it('projects the distance at the current pace', () => {
@@ -129,7 +135,13 @@ describe('summarizeRental: schedule and pace', () => {
 
   it('has no pace on the pick-up day but still gives a daily budget', () => {
     const summary = summarizeRental(rental({ currentKm: 45100 }), '2026-09-01');
-    expect(summary).toMatchObject({ phase: 'active', daysElapsed: 0, daysLeft: 30, averageKmPerDay: null, projectedTotalKm: null });
+    expect(summary).toMatchObject({
+      phase: 'active',
+      daysElapsed: 0,
+      daysLeft: 30,
+      averageKmPerDay: null,
+      projectedTotalKm: null,
+    });
     expect(summary.dailyBudgetKm).toBeCloseTo(2400 / 30);
   });
 
