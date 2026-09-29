@@ -38,6 +38,19 @@ jobs:
 
       - run: npm ci
 
+      # Gradle would download the NDK in the middle of the build; installing it
+      # up front lets a corrupted download be retried.
+      - name: Install the Android NDK
+        run: |
+          NDK=$(sed -nE 's/^ndkVersion = "([^"]+)"/\1/p' node_modules/react-native/gradle/libs.versions.toml)
+          echo "NDK $NDK"
+          for attempt in 1 2 3; do
+            if yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK" > /dev/null; then break; fi
+            echo "::warning::NDK download failed (attempt $attempt), retrying"
+            sleep 20
+          done
+          test -f "$ANDROID_HOME/ndk/$NDK/source.properties"
+
       - name: Generate the native Android project
         run: npx expo prebuild --platform android --no-install
 
