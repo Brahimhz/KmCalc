@@ -45,7 +45,7 @@ jobs:
           NDK=$(sed -nE 's/^ndkVersion = "([^"]+)"/\1/p' node_modules/react-native/gradle/libs.versions.toml)
           echo "NDK $NDK"
           for attempt in 1 2 3; do
-            if yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK" > /dev/null; then break; fi
+            if yes 2> /dev/null | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$NDK" > /dev/null; then break; fi
             echo "::warning::NDK download failed (attempt $attempt), retrying"
             sleep 20
           done

@@ -11,6 +11,9 @@ import { contractFromDefaults, FACTORY_DEFAULTS, sanitizeCurrency, type Contract
 import { allowanceModeOptions, describeDefaults, PERIOD_OPTIONS } from '../ui/labels';
 import { radius, usePalette, useThemedStyles, type Palette } from '../ui/theme';
 
+/** White in both themes so the thumb stands out on the light and the dark track. */
+const SWITCH_THUMB = '#FFFFFF';
+
 interface Props {
   defaults: Defaults;
   onSave: (defaults: Defaults, applyToCurrentRental: boolean) => void;
@@ -179,9 +182,9 @@ export function DefaultsScreen({ defaults, onSave, onClose }: Props) {
                 value={applyToCurrent}
                 onValueChange={setApplyToCurrent}
                 trackColor={{ false: palette.border, true: palette.primary }}
-                thumbColor={Platform.OS === 'ios' ? undefined : palette.surface}
+                thumbColor={Platform.OS === 'ios' ? undefined : SWITCH_THUMB}
                 // react-native-web colors the "on" thumb separately.
-                {...(Platform.OS === 'web' ? { activeThumbColor: palette.surface } : null)}
+                {...(Platform.OS === 'web' ? { activeThumbColor: SWITCH_THUMB } : null)}
                 accessibilityLabel="Apply to the current rental"
                 testID="apply-to-current"
               />
