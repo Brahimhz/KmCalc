@@ -54,14 +54,14 @@ export function describeResult(summary: RentalSummary, currency: string, rate: n
         tone: 'ok',
         label: 'Odometer limit',
         value: `${formatNumber(summary.limitOdometer ?? 0)} km`,
-        note: "Stay below this reading to avoid extra charges. Enter today's odometer to see how many km are left.",
+        note: "Stay below this reading to avoid extra charges. Save today's odometer reading to see how many km are left.",
       };
     case 'invalidReadings':
       return {
         tone: 'danger',
         label: 'Check the readings',
         value: '—',
-        note: 'The current odometer is lower than the start reading.',
+        note: 'The latest reading is lower than the start odometer.',
       };
     case 'over':
       return {

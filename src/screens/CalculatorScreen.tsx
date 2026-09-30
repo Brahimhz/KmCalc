@@ -3,46 +3,95 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '../components/Button';
+import { DailyStatsCard, DayResult } from '../components/DailyStats';
 import { DatePickerModal } from '../components/DatePickerModal';
 import { Field } from '../components/Field';
 import { Icon, type IconName } from '../components/Icon';
 import { ModalCard } from '../components/ModalCard';
+import { ReadingHistory } from '../components/ReadingHistory';
 import { ResultCard } from '../components/ResultCard';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { StatTile, type Tone } from '../components/StatTile';
 import { summarizeRental, type RentalSummary } from '../logic/calc';
 import { formatDate, formatDateWithWeekday, type ISODate } from '../logic/dates';
-import { formatKm, formatMoney, formatNumber, plural } from '../logic/numbers';
+import { buildLog, latestReading, readingError, summarizeDays, type LogEntry, type Reading } from '../logic/log';
+import { formatKm, formatMoney, formatNumber, parseNumber, plural } from '../logic/numbers';
 import { rentalValues, sanitizeCurrency, type Defaults, type RentalForm } from '../state/rental';
 import { allowanceModeOptions, describeDefaults, describePeriod, PERIOD_OPTIONS, UNIT_WORDS } from '../ui/labels';
 import { radius, usePalette, useThemedStyles, type Palette } from '../ui/theme';
+
+type Dialog = 'startDate' | 'readingDate' | 'deleteReading' | 'newRental';
 
 interface Props {
   rental: RentalForm;
   defaults: Defaults;
   today: ISODate;
   onChange: (changes: Partial<RentalForm>) => void;
+  onSaveReading: (reading: Reading) => void;
+  onDeleteReading: (date: ISODate) => void;
   onStartNewRental: (sameCar: boolean) => void;
   onOpenDefaults: () => void;
 }
 
-export function CalculatorScreen({ rental, defaults, today, onChange, onStartNewRental, onOpenDefaults }: Props) {
+export function CalculatorScreen({
+  rental,
+  defaults,
+  today,
+  onChange,
+  onSaveReading,
+  onDeleteReading,
+  onStartNewRental,
+  onOpenDefaults,
+}: Props) {
   const palette = usePalette();
   const styles = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
-  const [openDialog, setOpenDialog] = useState<'date' | 'newRental' | null>(null);
+  const [openDialog, setOpenDialog] = useState<Dialog | null>(null);
   // Changes every time a dialog opens so it is re-created with fresh state.
   const [dialogSession, setDialogSession] = useState(0);
 
-  const showDialog = (dialog: 'date' | 'newRental') => {
+  const showDialog = (dialog: Dialog) => {
     setDialogSession((session) => session + 1);
     setOpenDialog(dialog);
   };
   const closeDialog = () => setOpenDialog(null);
 
+  // The reading being entered. The draft stays null until the user types, so the saved reading of the chosen day shows.
+  const [readingDateChoice, setReadingDateChoice] = useState<ISODate | null>(null);
+  const [readingDraft, setReadingDraft] = useState<string | null>(null);
+  const [readingProblem, setReadingProblem] = useState<string | null>(null);
+  const [entryToDelete, setEntryToDelete] = useState<LogEntry | null>(null);
+
   const values = useMemo(() => rentalValues(rental), [rental]);
   const summary = useMemo(() => summarizeRental(values, today), [values, today]);
+  const log = useMemo(
+    () =>
+      values.startKm === null
+        ? []
+        : buildLog(rental.readings, values.startKm, rental.startDate, summary.dailyAllowanceKm),
+    [rental.readings, rental.startDate, values.startKm, summary.dailyAllowanceKm],
+  );
+  const dayStats = useMemo(() => summarizeDays(log), [log]);
+  const latestEntry = [...log].reverse().find((entry) => entry.valid) ?? null;
   const note = paceNote(summary, rental.startDate, today, rental.currency);
+
+  const readingDate = readingDateChoice ?? today;
+  const savedForDate = rental.readings.find((reading) => reading.date === readingDate) ?? null;
+  const readingText = readingDraft ?? (savedForDate ? String(savedForDate.km) : '');
+  const latest = latestReading(rental.readings);
+
+  const submitReading = () => {
+    const km = parseNumber(readingText);
+    const problem = readingError(rental.readings, values.startKm, rental.startDate, readingDate, km);
+    if (problem !== null || km === null) {
+      setReadingProblem(problem);
+      return;
+    }
+    onSaveReading({ date: readingDate, km });
+    setReadingDraft(null);
+    setReadingProblem(null);
+    setReadingDateChoice(null);
+  };
 
   const allowanceHint =
     rental.allowanceMode === 'total'
@@ -106,21 +155,60 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
                   style={styles.flex}
                 />
                 <Field
-                  label="Current odometer"
-                  hint="Today"
-                  value={rental.currentKm}
-                  onChangeText={(currentKm) => onChange({ currentKm })}
+                  label={readingDate === today ? "Today's reading" : `Reading of ${formatDate(readingDate, false)}`}
+                  value={readingText}
+                  onChangeText={(text) => {
+                    setReadingDraft(text);
+                    setReadingProblem(null);
+                  }}
+                  onSubmitEditing={submitReading}
                   suffix="km"
-                  placeholder="000000"
+                  placeholder={latest ? String(latest.km) : '000000'}
                   size="large"
                   maxLength={7}
                   selectTextOnFocus
-                  error={summary.status === 'invalidReadings' ? 'Lower than the start' : null}
-                  testID="current-km"
+                  error={readingProblem}
+                  accessibilityLabel="Odometer reading"
+                  testID="reading-km"
                   style={styles.flex}
                 />
               </View>
+              <View style={styles.readingActions}>
+                <Pressable
+                  onPress={() => showDialog('readingDate')}
+                  style={styles.dateChip}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Reading date: ${formatDateWithWeekday(readingDate)}`}
+                  accessibilityHint="Opens a calendar to save a reading for another day"
+                  testID="reading-date"
+                >
+                  <Icon name="calendar" size={18} color={palette.primary} />
+                  <Text style={styles.dateChipText}>
+                    {readingDate === today ? 'Today' : formatDate(readingDate, false)}
+                  </Text>
+                  <Icon name="chevron-down" size={18} color={palette.textMuted} />
+                </Pressable>
+                <Button
+                  title={savedForDate ? 'Update reading' : 'Save reading'}
+                  icon="save"
+                  onPress={submitReading}
+                  testID="save-reading"
+                  style={styles.flex}
+                />
+              </View>
+              {latestEntry ? (
+                <DayResult entry={latestEntry} today={today} dailyAllowanceKm={summary.dailyAllowanceKm} />
+              ) : (
+                <Text style={styles.readingHint}>
+                  Save the odometer once a day, e.g. every evening. Skipped a day? The km are spread over the days in
+                  between.
+                </Text>
+              )}
             </View>
+
+            {summary.dailyAllowanceKm !== null && dayStats.loggedDays > 0 ? (
+              <DailyStatsCard stats={dayStats} dailyAllowanceKm={summary.dailyAllowanceKm} />
+            ) : null}
 
             <View style={styles.tiles}>
               {statTiles(summary, rental.startDate, today).map((tile) => (
@@ -130,11 +218,27 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
 
             {note ? <PaceNote {...note} /> : null}
 
+            {log.length > 0 ? (
+              <>
+                <Text style={styles.sectionTitle}>History</Text>
+                <ReadingHistory
+                  entries={log}
+                  startKm={values.startKm}
+                  startDate={rental.startDate}
+                  today={today}
+                  onDelete={(entry) => {
+                    setEntryToDelete(entry);
+                    showDialog('deleteReading');
+                  }}
+                />
+              </>
+            ) : null}
+
             <Text style={styles.sectionTitle}>Rental contract</Text>
             <View style={styles.card}>
               <Text style={styles.fieldLabel}>Start date</Text>
               <Pressable
-                onPress={() => showDialog('date')}
+                onPress={() => showDialog('startDate')}
                 style={styles.dateButton}
                 accessibilityRole="button"
                 accessibilityLabel={`Start date: ${formatDateWithWeekday(rental.startDate)}`}
@@ -252,16 +356,58 @@ export function CalculatorScreen({ rental, defaults, today, onChange, onStartNew
       </KeyboardAvoidingView>
 
       <DatePickerModal
-        key={`date-${dialogSession}`}
-        visible={openDialog === 'date'}
+        key={`start-date-${dialogSession}`}
+        visible={openDialog === 'startDate'}
         value={rental.startDate}
         today={today}
+        title="Pick-up date"
         onSelect={(startDate) => {
           onChange({ startDate });
           closeDialog();
         }}
         onClose={closeDialog}
       />
+
+      <DatePickerModal
+        key={`reading-date-${dialogSession}`}
+        visible={openDialog === 'readingDate'}
+        value={readingDate}
+        today={today}
+        minDate={rental.startDate}
+        maxDate={today}
+        title="Date of the reading"
+        onSelect={(date) => {
+          setReadingDateChoice(date === today ? null : date);
+          setReadingDraft(null);
+          setReadingProblem(null);
+          closeDialog();
+        }}
+        onClose={closeDialog}
+      />
+
+      <ModalCard visible={openDialog === 'deleteReading'} onClose={closeDialog} testID="delete-dialog">
+        <Text style={styles.dialogTitle}>Delete this reading?</Text>
+        <Text style={styles.dialogText}>
+          {entryToDelete
+            ? `${formatDateWithWeekday(entryToDelete.date)}: ${formatKm(
+                entryToDelete.km,
+              )}. The days around it are recalculated.`
+            : ''}
+        </Text>
+        <View style={styles.dialogButtons}>
+          <Button variant="ghost" title="Cancel" onPress={closeDialog} />
+          <Button
+            title="Delete"
+            icon="trash-2"
+            onPress={() => {
+              if (entryToDelete) onDeleteReading(entryToDelete.date);
+              setEntryToDelete(null);
+              closeDialog();
+            }}
+            testID="confirm-delete"
+          />
+        </View>
+      </ModalCard>
 
       <NewRentalDialog
         key={`new-rental-${dialogSession}`}
@@ -316,19 +462,19 @@ function statTiles(s: RentalSummary, startDate: ISODate, today: ISODate): TilePr
     });
   }
 
-  const needsReadings = s.usedKm === null;
+  const needsReading = s.usedKm === null;
   tiles.push(
     s.averageKmPerDay !== null
       ? {
           label: 'Daily average',
           value: `${formatNumber(s.averageKmPerDay)} km`,
-          caption: 'per day so far',
+          caption: `per day over ${s.loggedDays} ${plural(s.loggedDays ?? 0, 'day')}`,
           testID: 'daily-average',
         }
       : {
           label: 'Daily average',
           value: '—',
-          caption: needsReadings ? 'Needs both odometer readings' : 'Available from day 2',
+          caption: needsReading ? 'Save a reading first' : 'Set the rental period',
           testID: 'daily-average',
         },
   );
@@ -341,11 +487,11 @@ function statTiles(s: RentalSummary, startDate: ISODate, today: ISODate): TilePr
       tone: 'danger',
       testID: 'daily-budget',
     });
-  } else if (s.dailyBudgetKm !== null) {
+  } else if (s.dailyBudgetKm !== null && s.budgetDays !== null) {
     tiles.push({
       label: 'Daily budget',
       value: `${formatNumber(Math.floor(s.dailyBudgetKm))} km`,
-      caption: 'per day to stay in the limit',
+      caption: `per day for the next ${s.budgetDays} ${plural(s.budgetDays, 'day')}`,
       tone: s.status === 'warning' ? 'warning' : 'good',
       testID: 'daily-budget',
     });
@@ -353,7 +499,11 @@ function statTiles(s: RentalSummary, startDate: ISODate, today: ISODate): TilePr
     tiles.push({
       label: 'Daily budget',
       value: '—',
-      caption: s.phase === 'ended' ? 'Rental period ended' : 'Needs both odometer readings',
+      caption: needsReading
+        ? 'Save a reading first'
+        : s.phase === 'ended'
+        ? 'Rental period ended'
+        : 'All rental days are logged',
       testID: 'daily-budget',
     });
   }
@@ -525,6 +675,20 @@ const makeStyles = (p: Palette) =>
     divider: { height: StyleSheet.hairlineWidth, marginVertical: 16, backgroundColor: p.border },
     periodLength: { width: 84 },
     currency: { width: 96 },
+    readingActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
+    dateChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 48,
+      paddingHorizontal: 12,
+      borderRadius: radius.field,
+      borderWidth: 1.5,
+      borderColor: p.border,
+      backgroundColor: p.surfaceMuted,
+    },
+    dateChipText: { fontSize: 15, fontWeight: '600', color: p.text },
+    readingHint: { marginTop: 12, fontSize: 13, lineHeight: 18, color: p.textMuted },
     gapTop: { marginTop: 10 },
     hint: { marginTop: 6, fontSize: 12, color: p.textMuted },
     hintError: { fontWeight: '600', color: p.danger },

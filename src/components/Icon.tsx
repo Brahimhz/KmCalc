@@ -18,6 +18,9 @@ const ICONS = {
   save: require('../assets/icons/save.png'),
   sliders: require('../assets/icons/sliders.png'),
   square: require('../assets/icons/square.png'),
+  'trash-2': require('../assets/icons/trash-2.png'),
+  'trending-down': require('../assets/icons/trending-down.png'),
+  'trending-up': require('../assets/icons/trending-up.png'),
 };
 
 export type IconName = keyof typeof ICONS;

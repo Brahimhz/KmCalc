@@ -12,8 +12,9 @@ export type AllowanceMode = 'total' | 'perPeriod';
 export interface RentalValues {
   /** Odometer reading when the car was picked up. */
   startKm: number | null;
-  /** Latest odometer reading. */
+  /** Latest odometer reading, taken at the end of `currentDate`. */
   currentKm: number | null;
+  currentDate: ISODate | null;
   allowanceKm: number | null;
   allowanceMode: AllowanceMode;
   periodLength: number | null;
@@ -56,10 +57,15 @@ export interface RentalSummary {
   daysLeft: number | null;
   phase: RentalPhase | null;
 
-  /** Average km per day since pick-up (available from the second day). */
+  /** The allowance spread evenly over the rental days: what "should" be driven per day. */
+  dailyAllowanceKm: number | null;
+  /** Rental days covered by the latest reading (the pick-up day is day 1). */
+  loggedDays: number | null;
+  /** Average km per day up to the latest reading. */
   averageKmPerDay: number | null;
-  /** Km per day that can still be driven without going over the allowance. */
+  /** Km per day that can still be driven over the `budgetDays` after the latest reading. */
   dailyBudgetKm: number | null;
+  budgetDays: number | null;
   /** Expected total distance at the end of the rental at the current pace. */
   projectedTotalKm: number | null;
   projectedExtraKm: number | null;
@@ -135,36 +141,36 @@ export function summarizeRental(values: RentalValues, today: ISODate): RentalSum
   const extraCost = extraKm !== null && rate !== null ? extraKm * rate : null;
   const usedFraction = usedKm !== null && allowance !== null ? usedKm / allowance : null;
 
-  // Pace and projection.
+  // Pace and projection, from the latest reading (the odometer at the end of its day).
+  const dailyAllowanceKm = allowance !== null && totalDays !== null && totalDays > 0 ? allowance / totalDays : null;
+  const loggedDays =
+    usedKm !== null && values.currentDate !== null
+      ? Math.max(diffDays(values.currentDate, values.startDate) + 1, 1)
+      : null;
   let averageKmPerDay: number | null = null;
   let dailyBudgetKm: number | null = null;
+  let budgetDays: number | null = null;
   let projectedTotalKm: number | null = null;
   let projectedExtraKm: number | null = null;
   let projectedExtraCost: number | null = null;
   let limitReachedOn: ISODate | null = null;
 
-  if (
-    usedKm !== null &&
-    allowance !== null &&
-    remainingKm !== null &&
-    totalDays !== null &&
-    daysElapsed !== null &&
-    daysLeft !== null
-  ) {
-    if (daysElapsed >= 1) {
-      averageKmPerDay = usedKm / daysElapsed;
-      // An estimate, so whole km: the extra km and the extra cost then match what is shown.
-      projectedTotalKm = phase === 'ended' ? usedKm : Math.round(averageKmPerDay * totalDays);
-      projectedExtraKm = Math.max(projectedTotalKm - allowance, 0);
-      projectedExtraCost = rate !== null ? projectedExtraKm * rate : null;
+  if (usedKm !== null && allowance !== null && remainingKm !== null && totalDays !== null && loggedDays !== null) {
+    averageKmPerDay = usedKm / loggedDays;
+    // An estimate, so whole km: the extra km and the extra cost then match what is shown.
+    projectedTotalKm = Math.round(averageKmPerDay * Math.max(totalDays, loggedDays));
+    projectedExtraKm = Math.max(projectedTotalKm - allowance, 0);
+    projectedExtraCost = rate !== null ? projectedExtraKm * rate : null;
 
-      if (phase === 'active' && averageKmPerDay > 0 && remainingKm > 0) {
-        // Days after the start date at which the allowance is used up at this pace.
-        const limitDay = Math.floor(allowance / averageKmPerDay);
-        if (limitDay < totalDays) limitReachedOn = addDays(values.startDate, limitDay);
-      }
+    if (averageKmPerDay > 0 && remainingKm > 0) {
+      // The rental day (1 = pick-up day) on which the allowance runs out at this pace.
+      const limitDay = Math.ceil(allowance / averageKmPerDay);
+      if (limitDay <= totalDays) limitReachedOn = addDays(values.startDate, limitDay - 1);
     }
-    if (phase !== 'ended' && daysLeft > 0) dailyBudgetKm = remainingKm / daysLeft;
+    if (loggedDays < totalDays) {
+      budgetDays = totalDays - loggedDays;
+      dailyBudgetKm = remainingKm / budgetDays;
+    }
   }
 
   if (status === 'ok') {
@@ -187,8 +193,11 @@ export function summarizeRental(values: RentalValues, today: ISODate): RentalSum
     daysElapsed,
     daysLeft,
     phase,
+    dailyAllowanceKm,
+    loggedDays,
     averageKmPerDay,
     dailyBudgetKm,
+    budgetDays,
     projectedTotalKm,
     projectedExtraKm,
     projectedExtraCost,

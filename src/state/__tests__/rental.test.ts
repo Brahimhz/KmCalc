@@ -2,6 +2,7 @@ import {
   FACTORY_DEFAULTS,
   newRental,
   normalizeDefaults,
+  normalizeReadings,
   normalizeRental,
   rentalValues,
   sanitizeCurrency,
@@ -21,11 +22,11 @@ describe('defaults', () => {
     });
   });
 
-  it('fills a new rental with the defaults, starting today', () => {
+  it('fills a new rental with the defaults, starting today with an empty log', () => {
     expect(newRental(FACTORY_DEFAULTS, today)).toEqual({
       startKm: '',
-      currentKm: '',
       startDate: today,
+      readings: [],
       periodLength: '1',
       periodUnit: 'month',
       allowanceKm: '2500',
@@ -35,20 +36,30 @@ describe('defaults', () => {
     });
   });
 
-  it('can start a new rental from the current odometer of the same car', () => {
+  it('can start a new rental from the odometer of the same car', () => {
     const rental = newRental(FACTORY_DEFAULTS, today, '46200');
     expect(rental.startKm).toBe('46200');
-    expect(rental.currentKm).toBe('46200');
+    expect(rental.readings).toEqual([]);
   });
 
-  it('converts the form to numbers for the calculation', () => {
-    expect(rentalValues({ ...newRental(FACTORY_DEFAULTS, today), startKm: '45000', currentKm: '' })).toMatchObject({
+  it('uses the latest reading as the current odometer', () => {
+    const rental = {
+      ...newRental(FACTORY_DEFAULTS, '2026-09-15'),
+      startKm: '45000',
+      readings: [
+        { date: '2026-09-20', km: 45800 },
+        { date: '2026-09-25', km: 46100 },
+      ],
+    };
+    expect(rentalValues(rental)).toMatchObject({
       startKm: 45000,
-      currentKm: null,
+      currentKm: 46100,
+      currentDate: '2026-09-25',
       allowanceKm: 2500,
       periodLength: 1,
       extraKmRate: 0.5,
     });
+    expect(rentalValues({ ...rental, readings: [] })).toMatchObject({ currentKm: null, currentDate: null });
   });
 });
 
@@ -84,14 +95,14 @@ describe('loading saved data', () => {
 
   it('repairs a saved rental', () => {
     const rental = normalizeRental(
-      { startKm: '45,000', currentKm: 46200, startDate: 'yesterday', periodUnit: 'year', extraKmRate: '0,75' },
+      { startKm: '45,000', startDate: 'yesterday', periodUnit: 'year', extraKmRate: '0,75', readings: 'none' },
       FACTORY_DEFAULTS,
       today,
     );
     expect(rental).toEqual({
       startKm: '45000',
-      currentKm: '',
       startDate: today,
+      readings: [],
       periodLength: '1',
       periodUnit: 'month',
       allowanceKm: '2500',
@@ -99,6 +110,29 @@ describe('loading saved data', () => {
       extraKmRate: '0.75',
       currency: 'AED',
     });
+  });
+
+  it('keeps well-formed readings, one per day, sorted', () => {
+    expect(
+      normalizeReadings([
+        { date: '2026-09-20', km: 45900 },
+        { date: '2026-09-18', km: 45700 },
+        { date: '2026-09-20', km: 45950 },
+        { date: 'soon', km: 46000 },
+        { date: '2026-09-21', km: -5 },
+        { date: '2026-09-22', km: '46100' },
+        null,
+      ]),
+    ).toEqual([
+      { date: '2026-09-18', km: 45700 },
+      { date: '2026-09-20', km: 45950 },
+    ]);
+  });
+
+  it('turns the current odometer of older versions into a reading for today', () => {
+    const rental = normalizeRental({ startKm: '45000', currentKm: '46,200' }, FACTORY_DEFAULTS, today);
+    expect(rental.readings).toEqual([{ date: today, km: 46200 }]);
+    expect(normalizeRental({ startKm: '45000', currentKm: '' }, FACTORY_DEFAULTS, today).readings).toEqual([]);
   });
 
   it('cleans up currency codes', () => {

@@ -98,3 +98,24 @@ export function formatRate(rate: number, currency: string): string {
 export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return count === 1 ? singular : pluralForm;
 }
+
+/** The minus sign shown in front of negative differences. */
+export const MINUS = '−';
+
+function signed(rounded: number, text: string): string {
+  if (rounded === 0) return text;
+  return `${rounded > 0 ? '+' : MINUS}${text}`;
+}
+
+/** A difference in whole km with its sign: "+37 km", "−28 km", "0 km". */
+export function formatSignedKm(value: number): string {
+  const rounded = roundTo(value, 0);
+  return `${signed(rounded, formatNumber(Math.abs(rounded)))} km`;
+}
+
+/** A fraction as a signed whole percentage: 0.44 -> "+44%", -0.28 -> "−28%". */
+export function formatPercent(fraction: number, withSign = true): string {
+  const rounded = roundTo(fraction * 100, 0);
+  const text = `${formatNumber(Math.abs(rounded))}%`;
+  return withSign ? signed(rounded, text) : text;
+}

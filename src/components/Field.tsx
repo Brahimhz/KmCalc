@@ -22,6 +22,8 @@ interface Props {
   size?: 'regular' | 'large';
   selectTextOnFocus?: boolean;
   maxLength?: number;
+  /** Called when the keyboard's "done" key is pressed. */
+  onSubmitEditing?: () => void;
   accessibilityLabel?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
@@ -42,6 +44,7 @@ export function Field({
   size = 'regular',
   selectTextOnFocus,
   maxLength,
+  onSubmitEditing,
   accessibilityLabel,
   testID,
   style,
@@ -72,6 +75,7 @@ export function Field({
           autoCorrect={false}
           autoCapitalize={kind === 'text' ? 'characters' : 'none'}
           returnKeyType="done"
+          onSubmitEditing={onSubmitEditing}
           accessibilityLabel={accessibilityLabel ?? label}
           testID={testID}
           style={[styles.input, size === 'large' && styles.inputLarge]}

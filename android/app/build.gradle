@@ -83,8 +83,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Bump both for every release: versionCode must always increase for Android to accept the update.
-        versionCode 2
-        versionName "1.1.0"
+        versionCode 3
+        versionName "1.2.0"
     }
     signingConfigs {
         debug {

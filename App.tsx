@@ -19,7 +19,7 @@ export default function App() {
 function Main() {
   const palette = usePalette();
   const today = useToday();
-  const { data, updateRental, saveDefaults, startNewRental } = useAppData();
+  const { data, updateRental, saveDefaults, saveReading, deleteReading, startNewRental } = useAppData();
   const [screen, setScreen] = useState<'calculator' | 'defaults'>('calculator');
 
   const openDefaults = useCallback(() => setScreen('defaults'), []);
@@ -41,6 +41,8 @@ function Main() {
           defaults={data.defaults}
           today={today}
           onChange={updateRental}
+          onSaveReading={saveReading}
+          onDeleteReading={deleteReading}
           onStartNewRental={startNewRental}
           onOpenDefaults={openDefaults}
         />

@@ -24,6 +24,9 @@ const NAMES = [
   'save',
   'sliders',
   'square',
+  'trash-2',
+  'trending-down',
+  'trending-up',
 ];
 const SIZE = 24;
 

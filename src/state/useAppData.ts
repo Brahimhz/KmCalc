@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { toISODate, type ISODate } from '../logic/dates';
+import { latestReading, removeReading, upsertReading, type Reading } from '../logic/log';
 import { contractFromDefaults, newRental, type Defaults, type RentalForm } from './rental';
 import { loadAppData, saveAppData, type AppData } from './storage';
 
@@ -38,16 +39,38 @@ export function useAppData() {
     );
   }, []);
 
-  /** Resets the rental to the defaults; `sameCar` keeps the current odometer as the new start reading. */
+  /** Adds a reading to the daily log, replacing any reading of the same day. */
+  const saveReading = useCallback((reading: Reading) => {
+    setData(
+      (current) =>
+        current && {
+          ...current,
+          rental: { ...current.rental, readings: upsertReading(current.rental.readings, reading) },
+        },
+    );
+  }, []);
+
+  const deleteReading = useCallback((date: ISODate) => {
+    setData(
+      (current) =>
+        current && {
+          ...current,
+          rental: { ...current.rental, readings: removeReading(current.rental.readings, date) },
+        },
+    );
+  }, []);
+
+  /** Resets the rental to the defaults; `sameCar` keeps the latest odometer reading as the new start reading. */
   const startNewRental = useCallback((sameCar: boolean) => {
     setData((current) => {
       if (!current) return current;
-      const odometer = sameCar ? current.rental.currentKm : '';
+      const latest = latestReading(current.rental.readings);
+      const odometer = sameCar && latest ? String(latest.km) : '';
       return { ...current, rental: newRental(current.defaults, toISODate(), odometer) };
     });
   }, []);
 
-  return { data, updateRental, saveDefaults, startNewRental };
+  return { data, updateRental, saveDefaults, saveReading, deleteReading, startNewRental };
 }
 
 /** Today's date, refreshed when the app comes back to the foreground and every minute. */

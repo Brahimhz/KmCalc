@@ -21,12 +21,14 @@
 
 ## What it does
 
-Enter the odometer reading from when you picked up the car and today's reading. KM Calc shows:
+Enter the odometer reading from when you picked up the car, then save the odometer once a day. KM Calc shows:
 
 - **KM remaining** in your allowance, with a progress bar and the odometer reading you must stay below.
 - **Extra km and the extra charge** when you go over the allowance (0.5 AED per km by default).
-- **Days left** and the return date of the rental.
-- Your **daily average** so far and a **daily budget** to stay within the limit.
+- **Today compared with the daily allowance** (the allowance spread over the rental days, e.g. 2,500 km ÷ 30 days = 83.3 km/day): *+37 km (+44%) over* or *−23 km (−28%) under*.
+- **Daily stats**: how many days you drove more than the allowance and by how many km (**+km, +%**), how many days less (**−km, −%**), and the overall balance.
+- A **history** of the readings with each day's km and **+/−%**. Skipped a day? The km of the next reading are spread evenly over the days in between. Missed readings can be filled in later and wrong ones deleted.
+- **Days left** and the return date, your **daily average** and a **daily budget** to stay within the limit.
 - A **projection** of where your current pace takes you by the end of the rental, and when you would hit the limit.
 
 Everything is saved on the phone. The app works offline and asks for no permissions.
@@ -48,14 +50,18 @@ Everything is saved on the phone. The app works offline and asks for no permissi
 ## How it calculates
 
 ```text
-used km       = current odometer − start odometer
-allowance     = KM allowance (× rental length when it is per day / week / month)
-km remaining  = allowance − used km
-extra km      = used km − allowance          (when above the allowance)
-extra charge  = extra km × charge per extra km
-daily budget  = km remaining ÷ days left
-projection    = daily average × days in the rental
+used km          = latest reading − start odometer
+allowance        = KM allowance (× rental length when it is per day / week / month)
+km remaining     = allowance − used km
+extra km         = used km − allowance          (when above the allowance)
+extra charge     = extra km × charge per extra km
+daily allowance  = allowance ÷ days in the rental
+a day's +/− km   = km driven that day − daily allowance   (+/−% of the daily allowance)
+daily budget     = km remaining ÷ days after the latest reading
+projection       = daily average × days in the rental
 ```
+
+A reading is the odometer at the end of its day, and the pick-up day is day 1.
 
 ## Install
 

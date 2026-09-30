@@ -1,5 +1,6 @@
 import type { AllowanceMode, PeriodUnit, RentalValues } from '../logic/calc';
 import { isValidISODate, type ISODate } from '../logic/dates';
+import { latestReading, sortReadings, type Reading } from '../logic/log';
 import { parseNumber, sanitizeDecimal, sanitizeInteger } from '../logic/numbers';
 
 /** Values that pre-fill every new rental. The user can change all of them in the app. */
@@ -21,11 +22,12 @@ export const FACTORY_DEFAULTS: Defaults = {
   currency: 'AED',
 };
 
-/** The current rental as edited on screen. Numbers are kept as the text the user typed. */
+/** The current rental as edited on screen. Contract numbers are kept as the text the user typed. */
 export interface RentalForm {
   startKm: string;
-  currentKm: string;
   startDate: ISODate;
+  /** The daily odometer log, sorted by date, at most one reading per day. */
+  readings: Reading[];
   periodLength: string;
   periodUnit: PeriodUnit;
   allowanceKm: string;
@@ -59,22 +61,24 @@ export function contractFromDefaults(defaults: Defaults): ContractFields {
 }
 
 /**
- * A fresh rental starting today with the default contract values. Pass the
- * odometer reading when renewing the same car to start from where it is now.
+ * A fresh rental starting today with the default contract values and an empty
+ * log. Pass the odometer reading when renewing the same car to start from where it is now.
  */
 export function newRental(defaults: Defaults, today: ISODate, odometer = ''): RentalForm {
   return {
     startKm: odometer,
-    currentKm: odometer,
     startDate: today,
+    readings: [],
     ...contractFromDefaults(defaults),
   };
 }
 
 export function rentalValues(form: RentalForm): RentalValues {
+  const latest = latestReading(form.readings);
   return {
     startKm: parseNumber(form.startKm),
-    currentKm: parseNumber(form.currentKm),
+    currentKm: latest?.km ?? null,
+    currentDate: latest?.date ?? null,
     allowanceKm: parseNumber(form.allowanceKm),
     allowanceMode: form.allowanceMode,
     periodLength: parseNumber(form.periodLength),
@@ -116,13 +120,31 @@ export function normalizeDefaults(raw: unknown): Defaults {
   };
 }
 
+/** Keeps well-formed readings, one per day (the last one wins), sorted by date. */
+export function normalizeReadings(raw: unknown): Reading[] {
+  if (!Array.isArray(raw)) return [];
+  const byDate = new Map<ISODate, number>();
+  for (const item of raw) {
+    if (isRecord(item) && isValidISODate(item.date) && nonNegative(item.km) !== undefined) {
+      byDate.set(item.date, item.km as number);
+    }
+  }
+  return sortReadings([...byDate].map(([date, km]) => ({ date, km })));
+}
+
 export function normalizeRental(raw: unknown, defaults: Defaults, today: ISODate): RentalForm {
   const fallback = newRental(defaults, today);
   if (!isRecord(raw)) return fallback;
+
+  let readings = normalizeReadings(raw.readings);
+  // Version 1.1 and older kept a single "current odometer": keep it as today's reading.
+  const legacyCurrentKm = parseNumber(textWith(raw.currentKm, sanitizeInteger) ?? '');
+  if (readings.length === 0 && legacyCurrentKm !== null) readings = [{ date: today, km: legacyCurrentKm }];
+
   return {
     startKm: textWith(raw.startKm, sanitizeInteger) ?? fallback.startKm,
-    currentKm: textWith(raw.currentKm, sanitizeInteger) ?? fallback.currentKm,
     startDate: isValidISODate(raw.startDate) ? raw.startDate : fallback.startDate,
+    readings,
     periodLength: textWith(raw.periodLength, sanitizeInteger) ?? fallback.periodLength,
     periodUnit: oneOf(raw.periodUnit, PERIOD_UNITS) ?? fallback.periodUnit,
     allowanceKm: textWith(raw.allowanceKm, sanitizeInteger) ?? fallback.allowanceKm,

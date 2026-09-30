@@ -21,6 +21,10 @@ interface Props {
   today: ISODate;
   onSelect: (date: ISODate) => void;
   onClose: () => void;
+  /** Days before `minDate` or after `maxDate` cannot be picked. */
+  minDate?: ISODate;
+  maxDate?: ISODate;
+  title?: string;
 }
 
 interface MonthRef {
@@ -48,11 +52,12 @@ function monthOf(date: ISODate): MonthRef {
  * Calendar in a modal. It starts on the month of `value` when mounted, so give
  * it a new `key` each time it is opened.
  */
-export function DatePickerModal({ visible, value, today, onSelect, onClose }: Props) {
+export function DatePickerModal({ visible, value, today, onSelect, onClose, minDate, maxDate, title }: Props) {
   const palette = usePalette();
   const styles = useThemedStyles(makeStyles);
   const [shown, setShown] = useState<MonthRef>(() => monthOf(value));
   const rows = useMemo(() => calendarRows(shown), [shown]);
+  const allowed = (date: ISODate) => (!minDate || date >= minDate) && (!maxDate || date <= maxDate);
 
   const shiftMonth = (delta: number) =>
     setShown(({ year, month }) => {
@@ -62,6 +67,7 @@ export function DatePickerModal({ visible, value, today, onSelect, onClose }: Pr
 
   return (
     <ModalCard visible={visible} onClose={onClose} testID="date-picker">
+      {title ? <Text style={styles.title}>{title}</Text> : null}
       <View style={styles.header}>
         <Pressable
           onPress={() => shiftMonth(-1)}
@@ -101,17 +107,26 @@ export function DatePickerModal({ visible, value, today, onSelect, onClose }: Pr
             const date = formatISODate({ ...shown, day });
             const selected = date === value;
             const isToday = date === today;
+            const disabled = !allowed(date);
             return (
               <Pressable
                 key={dayIndex}
                 onPress={() => onSelect(date)}
+                disabled={disabled}
                 style={styles.cell}
                 accessibilityRole="button"
                 accessibilityLabel={formatDate(date)}
-                accessibilityState={{ selected }}
+                accessibilityState={{ selected, disabled }}
               >
                 <View style={[styles.day, isToday && styles.today, selected && styles.selected]}>
-                  <Text style={[styles.dayText, isToday && styles.todayText, selected && styles.selectedText]}>
+                  <Text
+                    style={[
+                      styles.dayText,
+                      isToday && styles.todayText,
+                      selected && styles.selectedText,
+                      disabled && styles.disabledText,
+                    ]}
+                  >
                     {day}
                   </Text>
                 </View>
@@ -122,7 +137,7 @@ export function DatePickerModal({ visible, value, today, onSelect, onClose }: Pr
       ))}
 
       <View style={styles.footer}>
-        <Button variant="ghost" title="Today" onPress={() => onSelect(today)} />
+        {allowed(today) ? <Button variant="ghost" title="Today" onPress={() => onSelect(today)} /> : null}
         <Button variant="ghost" title="Cancel" onPress={onClose} />
       </View>
     </ModalCard>
@@ -150,5 +165,7 @@ const makeStyles = (p: Palette) =>
     dayText: { fontSize: 15, color: p.text, fontVariant: ['tabular-nums'] },
     todayText: { color: p.primary, fontWeight: '700' },
     selectedText: { color: p.onPrimary, fontWeight: '700' },
+    disabledText: { color: p.placeholder, fontWeight: '400' },
+    title: { marginBottom: 4, fontSize: 13, fontWeight: '700', color: p.textMuted, textAlign: 'center' },
     footer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 },
   });
