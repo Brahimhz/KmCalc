@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(/c/Users/hamza/AppData/Local/Android/Sdk/platform-tools/adb.exe -s emulator-5554 install -r /c/Projects/KmCalc/android/app/build/outputs/apk/release/app-release.apk)"
-    ]
-  }
-}

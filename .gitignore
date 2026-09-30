@@ -66,6 +66,9 @@ yarn-error.log
 # testing
 /coverage
 
+# Local Claude Code settings
+.claude/settings.local.json
+
 # Signing keys and secrets: never commit them
 *.p12
 *.jks
