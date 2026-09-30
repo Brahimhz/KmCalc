@@ -13,10 +13,10 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/on-track.png" width="200" alt="KM remaining with the daily budget" />
-  <img src="docs/screenshots/over-limit.png" width="200" alt="Over the limit with the extra charge" />
+  <img src="docs/screenshots/daily-reading.png" width="200" alt="KM remaining and today's reading compared with the daily allowance" />
+  <img src="docs/screenshots/daily-stats.png" width="200" alt="Daily stats: days over and under the allowance" />
+  <img src="docs/screenshots/history.png" width="200" alt="History of the daily readings" />
   <img src="docs/screenshots/dark-mode.png" width="200" alt="Dark mode" />
-  <img src="docs/screenshots/defaults.png" width="200" alt="Editing the default values" />
 </p>
 
 ## What it does
